@@ -93,6 +93,13 @@ ADD https://github.com/ffmpegwasm/libwebp.git#$LIBWEBP_BRANCH /src
 COPY build/libwebp.sh /src/build.sh
 RUN bash -x /src/build.sh
 
+# Build vidstab
+FROM emsdk-base AS vidstab-builder
+ENV VIDSTAB_BRANCH=v1.1.1
+ADD https://github.com/georgmartius/vid.stab.git#$VIDSTAB_BRANCH /src
+COPY build/vidstab.sh /src/build.sh
+RUN bash -x /src/build.sh
+
 # Build freetype2
 FROM emsdk-base AS freetype2-builder
 ENV FREETYPE2_BRANCH=VER-2-10-4
@@ -136,6 +143,7 @@ COPY --from=opus-builder $INSTALL_DIR $INSTALL_DIR
 COPY --from=theora-builder $INSTALL_DIR $INSTALL_DIR
 COPY --from=vorbis-builder $INSTALL_DIR $INSTALL_DIR
 COPY --from=libwebp-builder $INSTALL_DIR $INSTALL_DIR
+COPY --from=vidstab-builder $INSTALL_DIR $INSTALL_DIR
 COPY --from=libass-builder $INSTALL_DIR $INSTALL_DIR
 
 # Build ffmpeg
@@ -152,6 +160,7 @@ RUN bash -x /src/build.sh \
       --enable-libopus \
       --enable-zlib \
       --enable-libwebp \
+      --enable-libvidstab \
       --enable-libfreetype \
       --enable-libfribidi \
       --enable-libass
@@ -175,6 +184,7 @@ ENV FFMPEG_LIBS \
       -lopus \
       -lz \
       -lwebp \
+      -lvidstab \
       -lfreetype \
       -lfribidi \
       -lharfbuzz \

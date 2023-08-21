@@ -100,6 +100,7 @@ ffmpeg.wasm is built with toolchains / libraries:
             {name: "vorbis", version: "v1.3.3", note: ""},
             {name: "zlib", version: "v1.2.11", note: ""},
             {name: "libwebp", version: "v1.1.0", note: ""},
+            {name: "vid.stab", version: "v1.1.1", note: ""},
             {name: "freetype2", version: "v2.10.4", note: ""},
             {name: "fribidi", version: "v1.0.9", note: ""},
             {name: "harfbuzz", version: "5.2.0", note: ""},

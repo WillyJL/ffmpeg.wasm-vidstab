@@ -61,6 +61,11 @@ const libs: LibraryItem[] = [
     desc: "WEBP codec",
     img: require("@site/static/img/libs/webp.png").default,
   },
+  {
+    title: "vid.stab",
+    desc: "video stabilization library",
+    img: require("@site/static/img/libs/vidstab.png").default,
+  },
 ];
 
 function Library({ title, desc, img, isBlackBackground = false }: LibraryItem) {
