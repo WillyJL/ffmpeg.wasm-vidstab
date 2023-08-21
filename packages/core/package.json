@@ -1,7 +1,7 @@
 {
-  "name": "@ffmpeg/core",
+  "name": "@willyjl/ffmpeg.wasm-core-vidstab",
   "version": "0.12.2",
-  "description": "FFmpeg WebAssembly version (single thread)",
+  "description": "FFmpeg WebAssembly version (single thread). Fork with vidstab support",
   "main": "./dist/umd/ffmpeg-core.js",
   "exports": {
     ".": {
@@ -14,7 +14,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ffmpegwasm/ffmpeg.wasm.git"
+    "url": "git+https://github.com/Willy-JL/ffmpeg.wasm-vidstab.git"
   },
   "keywords": [
     "ffmpeg",
@@ -26,12 +26,12 @@
   "author": "Jerome Wu <jeromewus@gmail.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/ffmpegwasm/ffmpeg.wasm/issues"
+    "url": "https://github.com/Willy-JL/ffmpeg.wasm-vidstab/issues"
   },
   "engines": {
     "node": ">=16.6.0"
   },
-  "homepage": "https://github.com/ffmpegwasm/ffmpeg.wasm#readme",
+  "homepage": "https://github.com/Willy-JL/ffmpeg.wasm-vidstab#readme",
   "publishConfig": {
     "access": "public"
   }
