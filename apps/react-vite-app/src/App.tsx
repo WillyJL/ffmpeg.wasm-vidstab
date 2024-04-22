@@ -9,7 +9,7 @@ function App() {
   const messageRef = useRef<HTMLParagraphElement | null>(null)
 
   const load = async () => {
-    const baseURL = "https://unpkg.com/@ffmpeg/core-mt@0.12.2/dist/esm";
+    const baseURL = "https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/esm";
     const ffmpeg = ffmpegRef.current;
     ffmpeg.on("log", ({ message }) => {
       if (messageRef.current) messageRef.current.innerHTML = message;
@@ -31,7 +31,7 @@ function App() {
   };
 
   const transcode = async () => {
-    const videoURL = "https://ffmpegwasm.netlify.app/video/video-15s.avi";
+    const videoURL = "https://raw.githubusercontent.com/ffmpegwasm/testdata/master/video-15s.avi";
     const ffmpeg = ffmpegRef.current;
     await ffmpeg.writeFile("input.avi", await fetchFile(videoURL));
     await ffmpeg.exec(["-i", "input.avi", "output.mp4"]);

@@ -13,9 +13,16 @@ import {
   LogEventCallback,
   ProgressEventCallback,
   FileData,
+  FFFSType,
+  FFFSMountOptions,
+  FFFSPath,
 } from "./types.js";
 import { getMessageID } from "./utils.js";
 import { ERROR_TERMINATED, ERROR_NOT_LOADED } from "./errors.js";
+
+type FFMessageOptions = {
+  signal?: AbortSignal;
+};
 
 /**
  * Provides APIs to interact with ffmpeg web worker.
@@ -52,6 +59,8 @@ export class FFmpeg {
             this.loaded = true;
             this.#resolves[id](data);
             break;
+          case FFMessageType.MOUNT:
+          case FFMessageType.UNMOUNT:
           case FFMessageType.EXEC:
           case FFMessageType.WRITE_FILE:
           case FFMessageType.READ_FILE:
@@ -85,7 +94,8 @@ export class FFmpeg {
    */
   #send = (
     { type, data }: Message,
-    trans: Transferable[] = []
+    trans: Transferable[] = [],
+    signal?: AbortSignal
   ): Promise<CallbackData> => {
     if (!this.#worker) {
       return Promise.reject(ERROR_NOT_LOADED);
@@ -96,6 +106,14 @@ export class FFmpeg {
       this.#worker && this.#worker.postMessage({ id, type, data }, trans);
       this.#resolves[id] = resolve;
       this.#rejects[id] = reject;
+
+      signal?.addEventListener(
+        "abort",
+        () => {
+          reject(new DOMException(`Message # ${id} was aborted`, "AbortError"));
+        },
+        { once: true }
+      );
     });
   };
 
@@ -148,9 +166,13 @@ export class FFmpeg {
     callback: LogEventCallback | ProgressEventCallback
   ) {
     if (event === "log") {
-      this.#logEventCallbacks = this.#logEventCallbacks.filter((f) => f !== callback);
+      this.#logEventCallbacks = this.#logEventCallbacks.filter(
+        (f) => f !== callback
+      );
     } else if (event === "progress") {
-      this.#progressEventCallbacks = this.#progressEventCallbacks.filter((f) => f !== callback);
+      this.#progressEventCallbacks = this.#progressEventCallbacks.filter(
+        (f) => f !== callback
+      );
     }
   }
 
@@ -161,17 +183,30 @@ export class FFmpeg {
    * @category FFmpeg
    * @returns `true` if ffmpeg core is loaded for the first time.
    */
-  public load = (config: FFMessageLoadConfig = {}): Promise<IsFirst> => {
+  public load = (
+    { classWorkerURL, ...config }: FFMessageLoadConfig = {},
+    { signal }: FFMessageOptions = {}
+  ): Promise<IsFirst> => {
     if (!this.#worker) {
-      this.#worker = new Worker(new URL("./worker.js", import.meta.url), {
-        type: "module",
-      });
+      this.#worker = classWorkerURL ?
+        new Worker(new URL(classWorkerURL, import.meta.url), {
+          type: "module",
+        }) :
+        // We need to duplicated the code here to enable webpack
+        // to bundle worekr.js here.
+        new Worker(new URL("./worker.js", import.meta.url), {
+          type: "module",
+        });
       this.#registerHandlers();
     }
-    return this.#send({
-      type: FFMessageType.LOAD,
-      data: config,
-    }) as Promise<IsFirst>;
+    return this.#send(
+      {
+        type: FFMessageType.LOAD,
+        data: config,
+      },
+      undefined,
+      signal
+    ) as Promise<IsFirst>;
   };
 
   /**
@@ -202,12 +237,17 @@ export class FFmpeg {
      *
      * @defaultValue -1
      */
-    timeout = -1
+    timeout = -1,
+    { signal }: FFMessageOptions = {}
   ): Promise<number> =>
-    this.#send({
-      type: FFMessageType.EXEC,
-      data: { args, timeout },
-    }) as Promise<number>;
+    this.#send(
+      {
+        type: FFMessageType.EXEC,
+        data: { args, timeout },
+      },
+      undefined,
+      signal
+    ) as Promise<number>;
 
   /**
    * Terminate all ongoing API calls and terminate web worker.
@@ -244,7 +284,11 @@ export class FFmpeg {
    *
    * @category File System
    */
-  public writeFile = (path: string, data: FileData): Promise<OK> => {
+  public writeFile = (
+    path: string,
+    data: FileData,
+    { signal }: FFMessageOptions = {}
+  ): Promise<OK> => {
     const trans: Transferable[] = [];
     if (data instanceof Uint8Array) {
       trans.push(data.buffer);
@@ -253,6 +297,29 @@ export class FFmpeg {
       {
         type: FFMessageType.WRITE_FILE,
         data: { path, data },
+      },
+      trans,
+      signal
+    ) as Promise<OK>;
+  };
+
+  public mount = (fsType: FFFSType, options: FFFSMountOptions, mountPoint: FFFSPath, ): Promise<OK> => {
+    const trans: Transferable[] = [];
+    return this.#send(
+      {
+        type: FFMessageType.MOUNT,
+        data: { fsType, options, mountPoint },
+      },
+      trans
+    ) as Promise<OK>;
+  };
+
+  public unmount = (mountPoint: FFFSPath): Promise<OK> => {
+    const trans: Transferable[] = [];
+    return this.#send(
+      {
+        type: FFMessageType.UNMOUNT,
+        data: { mountPoint },
       },
       trans
     ) as Promise<OK>;
@@ -279,65 +346,106 @@ export class FFmpeg {
      *
      * @defaultValue binary
      */
-    encoding = "binary"
+    encoding = "binary",
+    { signal }: FFMessageOptions = {}
   ): Promise<FileData> =>
-    this.#send({
-      type: FFMessageType.READ_FILE,
-      data: { path, encoding },
-    }) as Promise<FileData>;
+    this.#send(
+      {
+        type: FFMessageType.READ_FILE,
+        data: { path, encoding },
+      },
+      undefined,
+      signal
+    ) as Promise<FileData>;
 
   /**
    * Delete a file.
    *
    * @category File System
    */
-  public deleteFile = (path: string): Promise<OK> =>
-    this.#send({
-      type: FFMessageType.DELETE_FILE,
-      data: { path },
-    }) as Promise<OK>;
+  public deleteFile = (
+    path: string,
+    { signal }: FFMessageOptions = {}
+  ): Promise<OK> =>
+    this.#send(
+      {
+        type: FFMessageType.DELETE_FILE,
+        data: { path },
+      },
+      undefined,
+      signal
+    ) as Promise<OK>;
 
   /**
    * Rename a file or directory.
    *
    * @category File System
    */
-  public rename = (oldPath: string, newPath: string): Promise<OK> =>
-    this.#send({
-      type: FFMessageType.RENAME,
-      data: { oldPath, newPath },
-    }) as Promise<OK>;
+  public rename = (
+    oldPath: string,
+    newPath: string,
+    { signal }: FFMessageOptions = {}
+  ): Promise<OK> =>
+    this.#send(
+      {
+        type: FFMessageType.RENAME,
+        data: { oldPath, newPath },
+      },
+      undefined,
+      signal
+    ) as Promise<OK>;
 
   /**
    * Create a directory.
    *
    * @category File System
    */
-  public createDir = (path: string): Promise<OK> =>
-    this.#send({
-      type: FFMessageType.CREATE_DIR,
-      data: { path },
-    }) as Promise<OK>;
+  public createDir = (
+    path: string,
+    { signal }: FFMessageOptions = {}
+  ): Promise<OK> =>
+    this.#send(
+      {
+        type: FFMessageType.CREATE_DIR,
+        data: { path },
+      },
+      undefined,
+      signal
+    ) as Promise<OK>;
 
   /**
    * List directory contents.
    *
    * @category File System
    */
-  public listDir = (path: string): Promise<FSNode[]> =>
-    this.#send({
-      type: FFMessageType.LIST_DIR,
-      data: { path },
-    }) as Promise<FSNode[]>;
+  public listDir = (
+    path: string,
+    { signal }: FFMessageOptions = {}
+  ): Promise<FSNode[]> =>
+    this.#send(
+      {
+        type: FFMessageType.LIST_DIR,
+        data: { path },
+      },
+      undefined,
+      signal
+    ) as Promise<FSNode[]>;
 
   /**
    * Delete an empty directory.
    *
    * @category File System
    */
-  public deleteDir = (path: string): Promise<OK> =>
-    this.#send({
-      type: FFMessageType.DELETE_DIR,
-      data: { path },
-    }) as Promise<OK>;
+  public deleteDir = (
+    path: string,
+    { signal }: FFMessageOptions = {}
+  ): Promise<OK> =>
+    this.#send(
+      {
+        type: FFMessageType.DELETE_DIR,
+        data: { path },
+      },
+      undefined,
+      signal
+    ) as Promise<OK>;
 }

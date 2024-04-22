@@ -17,11 +17,19 @@ export interface FFMessageLoadConfig {
    */
   wasmURL?: string;
   /**
-   * `ffmpeg-core.worker.js` URL.
+   * `ffmpeg-core.worker.js` URL. This worker is spawned when using multithread version of ffmpeg-core.
    *
+   * @ref: https://ffmpegwasm.netlify.app/docs/overview#architecture
    * @defaultValue `https://unpkg.com/@ffmpeg/core-mt@${CORE_VERSION}/dist/umd/ffmpeg-core.worker.js`;
    */
   workerURL?: string;
+  /**
+   * `ffmpeg.worker.js` URL. This worker is spawned when FFmpeg.load() is called, it is an essential worker and usually you don't need to update this config.
+   *
+   * @ref: https://ffmpegwasm.netlify.app/docs/overview#architecture
+   * @defaultValue `./worker.js`
+   */
+  classWorkerURL?: string;
 }
 
 export interface FFMessageExecData {
@@ -64,6 +72,41 @@ export interface FFMessageDeleteDirData {
   path: FFFSPath;
 }
 
+export enum FFFSType {
+  MEMFS = "MEMFS",
+  NODEFS = "NODEFS",
+  NODERAWFS = "NODERAWFS",
+  IDBFS  = "IDBFS",
+  WORKERFS = "WORKERFS",
+  PROXYFS = "PROXYFS",
+}
+
+export type WorkerFSFileEntry =
+  | File;
+
+export interface WorkerFSBlobEntry {
+  name: string;
+  data: Blob;
+}
+
+export interface WorkerFSMountData {
+  blobs?: WorkerFSBlobEntry[];
+  files?: WorkerFSFileEntry[];
+}
+
+export type FFFSMountOptions =
+  | WorkerFSMountData;
+
+export interface FFMessageMountData {
+  fsType: FFFSType;
+  options: FFFSMountOptions;
+  mountPoint: FFFSPath;
+}
+
+export interface FFMessageUnmountData {
+  mountPoint: FFFSPath;
+}
+
 export type FFMessageData =
   | FFMessageLoadConfig
   | FFMessageExecData
@@ -73,7 +116,9 @@ export type FFMessageData =
   | FFMessageRenameData
   | FFMessageCreateDirData
   | FFMessageListDirData
-  | FFMessageDeleteDirData;
+  | FFMessageDeleteDirData
+  | FFMessageMountData
+  | FFMessageUnmountData;
 
 export interface Message {
   type: string;
@@ -116,7 +161,7 @@ export type CallbackData =
   | LogEvent
   | ProgressEvent
   | IsFirst
-  | OK
+  | OK // eslint-disable-line
   | Error
   | FSNode[]
   | undefined;
