@@ -18,7 +18,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Willy-JL/ffmpeg.wasm-vidstab.git"
+    "url": "git+https://github.com/WillyJL/ffmpeg.wasm-vidstab.git"
   },
   "keywords": [
     "ffmpeg",
@@ -30,12 +30,12 @@
   "author": "Jerome Wu <jeromewus@gmail.com>",
   "license": "GPL-2.0-or-later",
   "bugs": {
-    "url": "https://github.com/Willy-JL/ffmpeg.wasm-vidstab/issues"
+    "url": "https://github.com/WillyJL/ffmpeg.wasm-vidstab/issues"
   },
   "engines": {
     "node": ">=16.x"
   },
-  "homepage": "https://github.com/Willy-JL/ffmpeg.wasm-vidstab#readme",
+  "homepage": "https://github.com/WillyJL/ffmpeg.wasm-vidstab#readme",
   "publishConfig": {
     "access": "public"
   }
